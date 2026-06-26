@@ -31,6 +31,37 @@ def classify_event_targets(events: pd.DataFrame) -> pd.DataFrame:
     return classified
 
 
+def _remap_to_pop_names(df: pd.DataFrame, pop_names: set[str]) -> pd.DataFrame:
+    """이벤트/시설 region_name을 인구 데이터 region_name으로 리매핑.
+
+    '경기도 일산서구' → '경기도 고양시 일산서구' 처럼
+    도+구 형식을 도+시+구 형식으로 변환.
+    """
+    if df.empty:
+        return df
+    sg_to_pop: dict[tuple[str, str], str] = {}
+    for name in pop_names:
+        parts = name.split()
+        if len(parts) >= 2:
+            key = (parts[0], parts[-1])
+            if key not in sg_to_pop:
+                sg_to_pop[key] = name
+
+    def remap(row):
+        name = str(row["region_name"])
+        if name in pop_names:
+            return name
+        parts = name.split()
+        if len(parts) >= 2:
+            key = (parts[0], parts[-1])
+            return sg_to_pop.get(key, name)
+        return name
+
+    df = df.copy()
+    df["region_name"] = df.apply(remap, axis=1)
+    return df
+
+
 def build_region_features_from_raw(raw: dict[str, pd.DataFrame]) -> pd.DataFrame:
     population = raw.get("population", pd.DataFrame()).copy()
     bus_stops = raw.get("bus_stops", pd.DataFrame()).copy()
@@ -43,6 +74,18 @@ def build_region_features_from_raw(raw: dict[str, pd.DataFrame]) -> pd.DataFrame
         events = classify_event_targets(_ensure_event_text(events))
 
     pop_agg = _aggregate_population(population)
+
+    # 이벤트/시설 region_name을 인구 데이터 기준으로 정규화 (도+구 → 도+시+구)
+    pop_names = set(pop_agg["region_name"].dropna())
+    if not events.empty:
+        events = _remap_to_pop_names(events, pop_names)
+    if not museums.empty:
+        museums = _remap_to_pop_names(museums, pop_names)
+    if not festivals.empty:
+        festivals = _remap_to_pop_names(festivals, pop_names)
+    if not bus_stops.empty:
+        bus_stops = _remap_to_pop_names(bus_stops, pop_names)
+
     event_agg = _aggregate_events(events)
     museum_agg = _aggregate_museums(museums)
     festival_agg = _aggregate_festivals(festivals)
@@ -120,19 +163,22 @@ def _distribute_city_events_to_gu(
 
     agg_idx = agg.set_index("region_name")
     new_rows: list[dict] = []
+    parent_cities_to_drop: set[str] = set()
 
     for parent_city, gu_group in gu_rows.groupby("_parent"):
         if parent_city not in agg_idx.index:
             continue
-        # 이미 구(區) 단위 이벤트 행이 있으면 배분 불필요
-        has_gu_event = any(rn in agg_idx.index for rn in gu_group["region_name"])
-        if has_gu_event:
-            continue
 
         parent_row = agg_idx.loc[parent_city]
+        added_for_parent = False
+
         for _, gu_row in gu_group.iterrows():
+            gu_name = gu_row["region_name"]
+            # 이 구에 이미 직접 이벤트 행이 있으면 배분 불필요
+            if gu_name in agg_idx.index:
+                continue
             share = gu_row["pop_share"] if not np.isnan(gu_row["pop_share"]) else 0.0
-            row = {"region_name": gu_row["region_name"], "province": gu_row["province"]}
+            row = {"region_name": gu_name, "province": gu_row["province"]}
             for col in num_cols:
                 val = parent_row[col] if col in parent_row.index else 0
                 if col.endswith(("_ratio", "_ratio_mean", "_mean")) or col in ("free_event_ratio", "museum_free_ratio", "transport_info_ratio"):
@@ -140,15 +186,16 @@ def _distribute_city_events_to_gu(
                 else:
                     row[col] = round(float(val) * share)
             new_rows.append(row)
+            added_for_parent = True
+
+        # 적어도 하나의 구에 배분했으면 부모 시 행 제거
+        if added_for_parent:
+            parent_cities_to_drop.add(parent_city)
 
     if not new_rows:
         return agg
 
     new_df = pd.DataFrame(new_rows)
-    # 부모 시 행은 구 단위로 쪼갰으므로 제거
-    cities_replaced = {r["region_name"].rsplit(" ", 1)[0] + " " + r["region_name"].rsplit(" ", 1)[0].split()[-1]
-                       for r in new_rows}
-    parent_cities_to_drop = {_parent_city(r["region_name"]) for r in new_rows}
     keep_mask = ~agg["region_name"].isin(parent_cities_to_drop)
     return pd.concat([agg[keep_mask], new_df], ignore_index=True)
 
