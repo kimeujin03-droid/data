@@ -1,0 +1,91 @@
+{
+  "culture_facilities": {
+    "title": "한국문화정보원_문화시설조회서비스",
+    "kind": "openapi_xml",
+    "source_page": "https://www.data.go.kr/data/15138930/openapi.do?recommendDataYn=Y",
+    "output": "data/raw/culture_facilities.csv",
+    "default_endpoint": "https://apis.data.go.kr/B553457/nopenapi/rest/cultureartspaces",
+    "paths": ["artgallery", "museum", "hall", "library", "performingplace"],
+    "page_param": "PageNo",
+    "rows_param": "numOfrows",
+    "endpoint_env": "CULTURE_FACILITIES_API_URL",
+    "key_env": "DATA_GO_KR_SERVICE_KEY",
+    "notes": "공연장, 미술관, 박물관, 도서관 등 문화시설 정보. 기본 End Point 뒤에 artgallery/museum/hall/library/performingplace 기능 경로를 붙여 호출한다."
+  },
+  "museum_artgr_standard": {
+    "title": "전국박물관미술관정보표준데이터 OpenAPI",
+    "kind": "openapi_xml",
+    "source_page": "https://api.data.go.kr/openapi/tn_pubr_public_museum_artgr_info_api",
+    "output": "data/raw/museum_artgr_standard.csv",
+    "default_endpoint": "https://api.data.go.kr/openapi/tn_pubr_public_museum_artgr_info_api",
+    "endpoint_env": "MUSEUM_ARTGR_STANDARD_API_URL",
+    "key_env": "DATA_GO_KR_SERVICE_KEY",
+    "notes": "박물관·미술관 표준데이터. 시설명, 유형, 주소, 좌표, 운영시간, 요금, 교통정보 등을 제공한다."
+  },
+  "culture_events": {
+    "title": "한국문화정보원_한눈에보는문화정보조회서비스",
+    "kind": "openapi_xml",
+    "source_page": "https://www.data.go.kr/data/15138937/openapi.do",
+    "output": "data/raw/culture_events.csv",
+    "default_endpoint": "https://apis.data.go.kr/B553457/cultureinfo",
+    "paths": ["period2"],
+    "page_param": "PageNo",
+    "rows_param": "numOfrows",
+    "default_params": {
+      "from": "20260101",
+      "to": "20261231"
+    },
+    "endpoint_env": "CULTURE_EVENTS_API_URL",
+    "key_env": "DATA_GO_KR_SERVICE_KEY",
+    "notes": "공연, 전시, 문화행사, 일정, 장소, 장르, 지역, 좌표 등 문화정보. 2026년 기간별 목록(period2)을 기본 수집한다."
+  },
+  "festivals_standard": {
+    "title": "전국문화축제표준데이터",
+    "kind": "standard_grid",
+    "source_page": "https://www.data.go.kr/data/15013104/standard.do",
+    "output": "data/raw/festivals_standard.csv",
+    "endpoint_env": "FESTIVALS_STANDARD_API_URL",
+    "key_env": "DATA_GO_KR_SERVICE_KEY",
+    "notes": "표준데이터 상세 화면의 Open API 또는 CSV 직접 다운로드 URL을 사용한다."
+  },
+  "population_age": {
+    "title": "행정안전부_지역별 연령별 주민등록 인구현황",
+    "kind": "manual_or_direct_download",
+    "source_page": "https://www.data.go.kr/data/3033304/fileData.do",
+    "output": "data/raw/population_age.csv",
+    "direct_url_env": "POPULATION_AGE_DOWNLOAD_URL",
+    "notes": "제공 URL은 https://jumin.mois.go.kr/ageStatMonth.do 이며, 연령별 인구현황 메뉴에서 CSV를 내려받는다."
+  },
+  "sigungu_boundary": {
+    "title": "국토교통부_(센서스경계)시군구경계",
+    "kind": "vworld_data_api",
+    "source_page": "https://www.data.go.kr/data/15125064/fileData.do?recommendDataYn=Y",
+    "output": "data/processed/sigungu_boundary.geojson",
+    "default_endpoint": "https://api.vworld.kr/req/data",
+    "key_env": "VWORLD_API_KEY",
+    "domain_env": "VWORLD_API_DOMAIN",
+    "attr_filter_env": "VWORLD_ATTR_FILTER",
+    "geom_filter_env": "VWORLD_GEOM_FILTER",
+    "default_params": {
+      "service": "data",
+      "request": "GetFeature",
+      "data": "LT_C_ADSIGG_INFO",
+      "version": "2.0",
+      "format": "json",
+      "crs": "EPSG:4326",
+      "size": "1000"
+    },
+    "direct_url_env": "SIGUNGU_BOUNDARY_DOWNLOAD_URL",
+    "notes": "VWorld Data API의 LT_C_ADSIGG_INFO 레이어. VWORLD_API_KEY가 필요하며 EPSG:4326 GeoJSON으로 저장한다. 단일검색은 VWORLD_ATTR_FILTER 또는 VWORLD_GEOM_FILTER로 제한한다."
+  },
+  "bus_stops": {
+    "title": "국토교통부_전국 버스정류장 위치정보",
+    "kind": "file_or_openapi",
+    "source_page": "https://www.data.go.kr/data/15067528/fileData.do",
+    "output": "data/raw/bus_stops.csv",
+    "endpoint_env": "BUS_STOPS_API_URL",
+    "direct_url_env": "BUS_STOPS_DOWNLOAD_URL",
+    "key_env": "DATA_GO_KR_SERVICE_KEY",
+    "notes": "파일데이터는 로그인 없이 다운로드 가능하다고 표시되며, 자동변환 OpenAPI도 제공된다."
+  }
+}
